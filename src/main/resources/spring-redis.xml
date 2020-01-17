@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:cache="http://www.springframework.org/schema/cache"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                        http://www.springframework.org/schema/beans/spring-beans.xsd
+                        http://www.springframework.org/schema/aop
+                        http://www.springframework.org/schema/aop/spring-aop.xsd
+                        http://www.springframework.org/schema/context
+                        http://www.springframework.org/schema/context/spring-context.xsd
+                        http://www.springframework.org/schema/tx
+                        http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd">
+    <!-- 开启spring缓存注解 -->
+    <cache:annotation-driven cache-manager="redisCacheManager"/>
+
+    <!-- 配置jedis连接池 -->
+
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxIdle" value="${jedis.maxIdle}"></property>
+        <property name="minIdle" value="${jedis.minIdle}"></property>
+        <property name="maxTotal" value="${jedis.maxTotal}"></property>
+    </bean>
+    <!-- 配置jedis工厂 -->
+    <bean id="jedisConnectionFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
+        <property name="hostName" value="${jedis.url}"/>
+        <property name="port" value="${jedis.port}"/>
+        <property name="poolConfig" ref="jedisPoolConfig"/>
+    </bean>
+    <!-- 配置jedis模板 -->
+    <bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
+
+        <property name="connectionFactory" ref="jedisConnectionFactory"/>
+        <property name="keySerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+        </property>
+        <property name="hashKeySerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+        </property>
+        <property name="valueSerializer">
+            <bean class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer"/>
+        </property>
+        <property name="hashValueSerializer">
+            <bean class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer"/>
+        </property>
+        <property name="enableTransactionSupport" value="true"/>
+    </bean>
+    <bean id="redisCacheConfig" class="com.tmall.util.RedisCacheConfig">
+        <constructor-arg ref="jedisConnectionFactory" />
+        <constructor-arg ref="redisTemplate" />
+        <constructor-arg ref="redisCacheManager" />
+    </bean>
+    <!-- 配置RedisCacheManager -->
+    <bean id="redisCacheManager" class="org.springframework.data.redis.cache.RedisCacheManager">
+        <constructor-arg name="redisOperations" ref="redisTemplate" />
+<!--        <property name="defaultExpiration" value="${redis.expiration}"/>-->
+
+        <!-- 此处可以设置项目中用到的缓存名称，即@Cache* 标签中的value -->
+        <constructor-arg name="cacheNames">
+            <set>
+                <value>caiya_a</value>
+                <value>caiya_test</value>
+                <value>sampleCache1</value>
+                <value>memoryCache</value>
+                <value>scanCache</value>
+                <value>padIndexCache</value>
+                <value>sampleCache1</value>
+                <value>sampleCache1</value>
+            </set>
+        </constructor-arg>
+        <!--默认缓存名字-->
+<!--        <property name="defaultCacheName" value="caiya_a"/>-->
+        <!--是否在容器启动时初始化-->
+        <property name="loadRemoteCachesOnStartup" value="true"/>
+        <!--是否使用前缀-->
+        <property name="usePrefix" value="true"/>
+        <!--前缀命名，仅当usePrefix为true时才生效-->
+        <property name="cachePrefix">
+            <bean class="org.springframework.data.redis.cache.DefaultRedisCachePrefix">
+                <constructor-arg name="delimiter" value=":"/>
+            </bean>
+        </property>
+        <!--缓存名字和有效期的分隔符-->
+<!--        <property name="separator" value="#"/>-->
+        <!--默认有效期1h-->
+        <!-- 多个缓存有效期，一般的单个工程可以省略此项 -->
+        <!-- <property name="expires">
+            <map>
+                <entry key="caiya_a" value="1800"/>
+            </map>
+        </property> -->
+    </bean>
+</beans>
